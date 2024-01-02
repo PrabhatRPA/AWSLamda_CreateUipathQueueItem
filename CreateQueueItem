@@ -1,0 +1,98 @@
+## This script requires "requests": http://docs.python-requests.org/
+## To install: pip install requests
+
+import requests
+import json
+
+def lambda_handler(event, context):
+    try:
+        # Replace 'https://api.example.com' with the actual URL you want to call
+        api_url = 'https://account.uipath.com/oauth/token'
+
+        # Define data to be included in the POST request body as JSON
+        data = {
+            'grant_type': 'refresh_token',
+            'client_id': '8DEv1AMNXczW3y4U15LL3jYf62jK93n5',
+            'refresh_token': 'bvia2axcd0zfsXQhKbNTkyUouyYYWDAZ6lGmGt6x0agor',
+        }
+
+        # Define headers required by the API
+        headers = {
+            'Content-Type': 'application/json',
+            'X-UIPATH-TenantName': 'DefaultTenant'
+            # Add other headers as needed
+        }
+
+        # Make an HTTP POST request to the API with JSON data and headers
+        response = requests.post(api_url, data=json.dumps(data), headers=headers)
+
+        # Check if the request was successful (status code 200)
+        if response.status_code == 200:
+            # Parse the JSON response (if the response is JSON)
+            try:
+                api_response = response.json()
+                access_token = api_response.get('access_token')
+                auth = f"Bearer {access_token}"
+                print(f"Extracted Value: {access_token}")
+                print(f"Barer token is : {auth}")
+                print("API Response:")
+                print(json.dumps(api_response, indent=2))
+                
+                api_url2 = 'https://cloud.uipath.com/learnzzrnrge/DefaultTenant/orchestrator_/odata/Queues/UiPathODataSvc.AddQueueItem'
+                data2 = {'itemData':{'Name': 'WebAppDemo_Queue','Priority': 'High','SpecificContent': {'name': 'FromAWSLamda_SucessifulCode','Medicalid':'123455'}}}
+                headers2 = {'Content-Type': 'application/json',
+                                'Authorization': f"Bearer {access_token}",
+                                'X-UIPATH-TenantName': 'DefaultTenant',
+                                'X-UIPATH-OrganizationUnitId': '4895704'
+                               }
+                response2 = requests.post(api_url2, data=json.dumps(data2), headers=headers2)
+                if response2.status_code == 201:
+                        try:
+                            api_response2 = response2.json()
+                            print(f"Error: Code status code 201")
+                            print("API Response2:")
+                            print(json.dumps(api_response2, indent=2))
+                            return {
+                                    'statusCode': 201,
+                                    'body': json.dumps({'status': 'success', 'message': 'HTTP request successful'})
+                            }
+                        except Exception as e:
+                            print("Error parsing JSON response:", str(e))
+                            return {
+                                    'statusCode': 500,
+                                    'body': json.dumps({'status': 'error', 'message': 'Error parsing JSON response'})
+                            }
+                else:
+                    print(f"Error: {response2.status_code} - {response2.text}")
+                    print(f"Error: Code did not enter status code 201")
+                    #url_with_token = f'{api_url}?access_token={access_token}'
+                    #response2 = requests.post(url_with_token, data=json.dumps(data2), headers=headers2)
+                    return {
+                            'statusCode': response2.status_code,
+                            'body': json.dumps({'status': 'error', 'message': f'HTTP request failed with status code {response2.status_code}'})
+                    }
+                
+                
+                print("API Response:")
+                print(json.dumps(api_response, indent=2))
+            except json.JSONDecodeError:
+                print("Non-JSON response:", response.text)
+
+            return {
+                'statusCode': 200,
+                'body': json.dumps({'status': 'success', 'message': 'HTTP request successful'})
+
+            }
+        else:
+            print(f"Error: {response.status_code} - {response.text}")
+            return {
+                'statusCode': response.status_code,
+                'body': json.dumps({'status': 'error', 'message': f'HTTP request failed with status code {response.status_code}'})
+            }
+
+    except Exception as e:
+        print("Error making HTTP request:", str(e))
+        return {
+            'statusCode': 500,
+            'body': json.dumps({'status': 'error', 'message': 'Error making HTTP request'})
+        }
